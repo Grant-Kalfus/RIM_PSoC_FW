@@ -1,0 +1,15 @@
+*
+!main.c
+!cyapicallbacks.h
+!StepperController.cyprj
+!StepperController.cycsh
+!TopDesign
+!TopDesign.cysch
+!L6470_config.c
+!L6470_config.h
+!L6470_regdef.h
+!RIM_UI_def.c
+!RIM_UI_def.h
+!README.md
+!.gitignore.txt
+!StepperController.cydsn
