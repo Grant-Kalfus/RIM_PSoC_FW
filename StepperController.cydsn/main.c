@@ -78,8 +78,12 @@ CY_ISR(UART_INT_HANDLER)
         RIM_Motors[cur_motor_id].recieved_cmd = 1;
         
         
+        
         //Start motor movement
         motor_move(RIM_Motors[cur_motor_id].motor_dir ^ 0x1, RIM_Motors[cur_motor_id].steps);
+        
+        
+        
         
         cur_bit_field = -1;
         steps = 0;
@@ -111,6 +115,7 @@ int main(void)
     
     RIM_Motors[0].is_busy = 0;
     RIM_Motors[0].recieved_cmd = 0;
+    RIM_Motors[0].sent_run_message = 0;
     
     CyGlobalIntEnable; /* Enable global interrupts. */
     UART_INT_StartEx(UART_INT_HANDLER);
@@ -144,6 +149,10 @@ int main(void)
 
     for(;;)
     {  
+        
+        //Send update to PC that motor is currently running
+        
+        
         //The motor is moving when BUSY_Read() = 0
         RIM_Motors[0].is_busy = BUSY_Read() == 0 ? 1 : 0;
         

@@ -26,6 +26,7 @@
     struct motors {
         uint16 steps;
         uint8 motor_dir;  
+        uint8 sent_run_message;
         
         //True false
         uint8 recieved_cmd;
