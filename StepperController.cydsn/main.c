@@ -24,6 +24,12 @@ uint8 cur_motor_id;
 
 struct motors RIM_Motors[7];
 
+
+
+
+//Checks if a pin is busy
+uint8 check_busy(uint8 pin_num);
+
 //ISR for interpreting input from the computer
 //Expects three bytes of data
 //ISR runs a total of 6 times per full transmission due to catching the null terminators
@@ -47,32 +53,39 @@ CY_ISR(UART_INT_HANDLER)
         
         cur_motor_id = ((recieved_uart_char & RIM_MOTOR_ID) >> 4) - 1;
         
+        //Prevent command overlap
+        if(RIM_Motors[cur_motor_id].is_busy)
+            cur_bit_field = -1;
+        
 
         RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 7;
     }
     else if(cur_bit_field == 3)
     {
-        
+        //LSB of 16b number of steps to take
         steps |= recieved_uart_char;
         cmd_bytes[1] = recieved_uart_char;
     }
     else if(cur_bit_field == 5)
     {
-        
+        //MSB of 16b number of steps to take
         steps |= ((uint16)recieved_uart_char << 8);
         
         cmd_bytes[2] = recieved_uart_char;
         
         RIM_Motors[cur_motor_id].steps = steps;
-        RIM_Motors[cur_motor_id].recieved_cmd = 1;
         RIM_Motors[cur_motor_id].is_busy = 1;
+        RIM_Motors[cur_motor_id].recieved_cmd = 1;
+        
+        
+        //Start motor movement
+        motor_move(RIM_Motors[cur_motor_id].motor_dir ^ 0x1, RIM_Motors[cur_motor_id].steps);
         
         cur_bit_field = -1;
-        
-        UARTD_UartPutChar(cmd_bytes[0]);
-        UARTD_UartPutChar(cmd_bytes[1]);
-        UARTD_UartPutChar(cmd_bytes[2]);
         steps = 0;
+        //UARTD_UartPutChar(cmd_bytes[0]);
+        //UARTD_UartPutChar(cmd_bytes[1]);
+        //UARTD_UartPutChar(cmd_bytes[2]);
 
     }
 
@@ -95,6 +108,10 @@ CY_ISR(UART_INT_HANDLER)
 
 int main(void)
 {
+    
+    RIM_Motors[0].is_busy = 0;
+    RIM_Motors[0].recieved_cmd = 0;
+    
     CyGlobalIntEnable; /* Enable global interrupts. */
     UART_INT_StartEx(UART_INT_HANDLER);
     
@@ -127,16 +144,15 @@ int main(void)
 
     for(;;)
     {  
-        if(RIM_Motors[0].recieved_cmd)
+        //The motor is moving when BUSY_Read() = 0
+        RIM_Motors[0].is_busy = BUSY_Read() == 0 ? 1 : 0;
+        
+        if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd)
         {
-            motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
-            while(BUSY_Read() == 0);
-            
             transfer(SOFT_STOP);
             while(BUSY_Read() == 0);
             
             RIM_Motors[0].is_busy = 0;
-            
             RIM_Motors[0].recieved_cmd = 0;
         }
         
@@ -160,6 +176,7 @@ int main(void)
     }
 }
 
+//Motor 1 is the first bit
 
 
 /* [] END OF FILE */
