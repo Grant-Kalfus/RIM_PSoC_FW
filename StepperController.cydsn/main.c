@@ -24,7 +24,9 @@ uint8 cur_motor_id;
 
 struct motors RIM_Motors[7];
 
-
+//ISR for interpreting input from the computer
+//Expects three bytes of data
+//ISR runs a total of 6 times per full transmission due to catching the null terminators
 CY_ISR(UART_INT_HANDLER)
 {
 //Method 1    
