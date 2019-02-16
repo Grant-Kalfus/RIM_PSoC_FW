@@ -51,7 +51,7 @@ CY_ISR(UART_INT_HANDLER)
         //D M M M | U U U U
         //D = Direction, M = Motor ID, U = unused
         
-        cur_motor_id = ((recieved_uart_char & RIM_MOTOR_ID) >> 4) - 1;
+        cur_motor_id = ((recieved_uart_char & RIM_MOTOR_ID) >> 4);
         
         //Prevent command overlap
         if(RIM_Motors[cur_motor_id].is_busy)
@@ -156,6 +156,7 @@ int main(void)
             
             RIM_Motors[0].is_busy = L6470_NOT_BUSY;
             RIM_Motors[0].recieved_cmd = CMD_NONE;
+            UARTD_UartPutChar(RIM_OP_MOTOR_STOP | 0x00);
         } 
         else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
         {
@@ -163,7 +164,7 @@ int main(void)
             motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
             RIM_Motors[0].recieved_cmd = CMD_RUNNING;
             //One byte information that tells the PC that a motor 1 is running
-            //UARTD_UartPutChar(RIM_OP_MOTOR_RUNNING | 0x01);
+            UARTD_UartPutChar(RIM_OP_MOTOR_RUNNING | 0x00);
         }
         
         
