@@ -23,6 +23,16 @@
     #define RIM_FW 0x00
     #define RIM_BW 0x01
     
+    #define CMD_NONE 0x00
+    #define CMD_QUEUED 0x01
+    #define CMD_RUNNING 0x02
+    
+    #define L6470_NOT_BUSY 0x00
+    #define L6470_BUSY 0x01
+    
+    #define RIM_OP_MOTOR_RUNNING 0x00
+    #define RIM_OP_MOTOR_STOP 0x10
+    
     struct motors {
         uint16 steps;
         uint8 motor_dir;  

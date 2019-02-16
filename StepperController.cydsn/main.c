@@ -74,16 +74,8 @@ CY_ISR(UART_INT_HANDLER)
         cmd_bytes[2] = recieved_uart_char;
         
         RIM_Motors[cur_motor_id].steps = steps;
-        RIM_Motors[cur_motor_id].is_busy = 1;
-        RIM_Motors[cur_motor_id].recieved_cmd = 1;
-        
-        
-        
-        //Start motor movement
-        motor_move(RIM_Motors[cur_motor_id].motor_dir ^ 0x1, RIM_Motors[cur_motor_id].steps);
-        
-        
-        
+        RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
+        RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
         
         cur_bit_field = -1;
         steps = 0;
@@ -114,7 +106,7 @@ int main(void)
 {
     
     RIM_Motors[0].is_busy = 0;
-    RIM_Motors[0].recieved_cmd = 0;
+    RIM_Motors[0].recieved_cmd = CMD_NONE;
     RIM_Motors[0].sent_run_message = 0;
     
     CyGlobalIntEnable; /* Enable global interrupts. */
@@ -154,15 +146,24 @@ int main(void)
         
         
         //The motor is moving when BUSY_Read() = 0
-        RIM_Motors[0].is_busy = BUSY_Read() == 0 ? 1 : 0;
+        RIM_Motors[0].is_busy = BUSY_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
         
-        if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd)
+        
+        if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd == CMD_RUNNING)
         {
             transfer(SOFT_STOP);
             while(BUSY_Read() == 0);
             
-            RIM_Motors[0].is_busy = 0;
-            RIM_Motors[0].recieved_cmd = 0;
+            RIM_Motors[0].is_busy = L6470_NOT_BUSY;
+            RIM_Motors[0].recieved_cmd = CMD_NONE;
+        } 
+        else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
+        {
+            //Start motor movement
+            motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
+            RIM_Motors[0].recieved_cmd = CMD_RUNNING;
+            //One byte information that tells the PC that a motor 1 is running
+            //UARTD_UartPutChar(RIM_OP_MOTOR_RUNNING | 0x01);
         }
         
         
