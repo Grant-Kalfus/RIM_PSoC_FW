@@ -17,8 +17,8 @@
     
     #include "project.h"
     //Definitions for RIM packets
-    #define RIM_DIRECTION 0x80
-    #define RIM_MOTOR_ID 0x70
+    #define RIM_DIRECTION 0x08
+    #define RIM_MOTOR_ID 0x07
     
     #define RIM_FW 0x00
     #define RIM_BW 0x01
@@ -30,13 +30,19 @@
     #define L6470_NOT_BUSY 0x00
     #define L6470_BUSY 0x01
     
-    #define RIM_OP_MOTOR_RUNNING 0x00
-    #define RIM_OP_MOTOR_STOP 0x10
+    //RIM OpCodes
+    #define RIM_OP_MOTOR_RUN           0x00
+    #define RIM_OP_MOTOR_STOP          0x10
+    #define RIM_OP_MOTOR_SET_PARAM     0x20
+    #define RIM_OP_MOTOR_STATUS        0x30
+    #define RIM_OP_ENCODER_INFO        0x40
     
+    #define RIM_OP_MOTOR_EXTENDED_STEP 0x80
+    
+
     struct motors {
         uint16 steps;
         uint8 motor_dir;  
-        uint8 sent_run_message;
         
         //True false
         uint8 recieved_cmd;

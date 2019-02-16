@@ -16,15 +16,11 @@
 uint16 seeval;
 int8 cur_bit_field = 0;
 
-uint16 steps;
-
 uint8 cmd_bytes[3];
 
 uint8 cur_motor_id;
 
 struct motors RIM_Motors[7];
-
-
 
 
 //Checks if a pin is busy
@@ -47,67 +43,55 @@ CY_ISR(UART_INT_HANDLER)
         cmd_bytes[0] = recieved_uart_char;
         
         //Expected bit field:
-        //_ _ _ _ | _ _ _ _ 
-        //D M M M | U U U U
-        //D = Direction, M = Motor ID, U = unused
+        //_ _ _ _ |_ _ _ _ 
+        //O O O O | D M M M
+        //O = Opcode, D = Direction, M = Motor ID, U = unused
         
-        cur_motor_id = ((recieved_uart_char & RIM_MOTOR_ID) >> 4);
+        
+        
+        cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
         
         //Prevent command overlap
         if(RIM_Motors[cur_motor_id].is_busy)
             cur_bit_field = -1;
         
 
-        RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 7;
+        RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 3;
     }
     else if(cur_bit_field == 3)
     {
         //LSB of 16b number of steps to take
-        steps |= recieved_uart_char;
+        
+        RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
+        
         cmd_bytes[1] = recieved_uart_char;
     }
     else if(cur_bit_field == 5)
     {
         //MSB of 16b number of steps to take
-        steps |= ((uint16)recieved_uart_char << 8);
-        
         cmd_bytes[2] = recieved_uart_char;
         
-        RIM_Motors[cur_motor_id].steps = steps;
+        
+        RIM_Motors[cur_motor_id].steps |= ((uint16)recieved_uart_char << 8);
+        
         RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
         RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
         
         cur_bit_field = -1;
-        steps = 0;
-        //UARTD_UartPutChar(cmd_bytes[0]);
-        //UARTD_UartPutChar(cmd_bytes[1]);
-        //UARTD_UartPutChar(cmd_bytes[2]);
 
     }
 
-//Method 2
- /*  position++;
-    if(position == 3)
-    {
-       uint8 upper = UART_ReadRxData();
-       uint8 lower = UART_ReadRxData();
-       steps = lower | (upper << 8);
-       command = UART_ReadRxData();
-       UART_PutChar(command);
-       UART_PutChar(upper);
-       UART_PutChar(lower);
-       position=1;
-    }
-    Received_ClearPending();
-    */
 }
 
 int main(void)
 {
+    int i = 0;
     
-    RIM_Motors[0].is_busy = 0;
-    RIM_Motors[0].recieved_cmd = CMD_NONE;
-    RIM_Motors[0].sent_run_message = 0;
+    for(i = 0; i < 7; i++){
+        RIM_Motors[i].is_busy = 0;
+        RIM_Motors[i].recieved_cmd = CMD_NONE;
+        RIM_Motors[i].steps = 0;
+    }
     
     CyGlobalIntEnable; /* Enable global interrupts. */
     UART_INT_StartEx(UART_INT_HANDLER);
@@ -156,6 +140,7 @@ int main(void)
             
             RIM_Motors[0].is_busy = L6470_NOT_BUSY;
             RIM_Motors[0].recieved_cmd = CMD_NONE;
+            RIM_Motors[0].steps = 0;
             UARTD_UartPutChar(RIM_OP_MOTOR_STOP | 0x00);
         } 
         else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
@@ -164,7 +149,7 @@ int main(void)
             motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
             RIM_Motors[0].recieved_cmd = CMD_RUNNING;
             //One byte information that tells the PC that a motor 1 is running
-            UARTD_UartPutChar(RIM_OP_MOTOR_RUNNING | 0x00);
+            UARTD_UartPutChar(RIM_OP_MOTOR_MOVE | 0x00);
         }
         
         
