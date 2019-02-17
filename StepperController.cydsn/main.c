@@ -149,7 +149,7 @@ int main(void)
             motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
             RIM_Motors[0].recieved_cmd = CMD_RUNNING;
             //One byte information that tells the PC that a motor 1 is running
-            UARTD_UartPutChar(RIM_OP_MOTOR_MOVE | 0x00);
+            UARTD_UartPutChar(RIM_OP_MOTOR_RUN | 0x00);
         }
         
         
