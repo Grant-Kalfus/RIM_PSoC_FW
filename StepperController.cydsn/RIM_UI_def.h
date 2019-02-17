@@ -46,6 +46,10 @@
         
         //True false
         uint8 recieved_cmd;
+        
+        
+        uint8 command_type;
+        
         uint8 is_busy;
     };
 

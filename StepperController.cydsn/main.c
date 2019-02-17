@@ -63,11 +63,18 @@ CY_ISR(UART_INT_HANDLER)
                     cur_bit_field = -1;
                 else
                     RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 3;
-                
+                    RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_RUN;
+                break;
+                    
+            case RIM_OP_MOTOR_STATUS:
+                cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
+                if(RIM_Motors[cur_motor_id].is_busy)
+                    cur_bit_field = -1;
+                else
+                    RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_STATUS;
                 break;
         }
         
-        //Prevent command overlap
         
     }
     //Byte 2
@@ -78,6 +85,8 @@ CY_ISR(UART_INT_HANDLER)
         {
             case RIM_OP_MOTOR_RUN:
                 RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
+                break;
+            case RIM_OP_MOTOR_STATUS:
                 break;
         }
         
@@ -93,6 +102,10 @@ CY_ISR(UART_INT_HANDLER)
             case RIM_OP_MOTOR_RUN:
                 //MSB of 16b number of steps to take
                 RIM_Motors[cur_motor_id].steps |= ((uint16)recieved_uart_char << 8);
+                RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
+                RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
+                break;
+            case RIM_OP_MOTOR_STATUS:
                 RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
@@ -113,6 +126,9 @@ int main(void)
         RIM_Motors[i].recieved_cmd = CMD_NONE;
         RIM_Motors[i].steps = 0;
     }
+    
+    uint16 RIM_UI_cmd_temp = 0;
+    byte cmd_content[2] = {0, 0};
     
     CyGlobalIntEnable; /* Enable global interrupts. */
     UART_INT_StartEx(UART_INT_HANDLER);
@@ -136,7 +152,7 @@ int main(void)
     set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ);
     set_param(KVAL_RUN, 0xFF);
     
-    get_status();
+    
     
     char result[100];
     
@@ -154,25 +170,48 @@ int main(void)
         RIM_Motors[0].is_busy = BUSY_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
         
         
-        if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd == CMD_RUNNING)
-        {
-            transfer(SOFT_STOP);
-            while(BUSY_Read() == 0);
-            
-            RIM_Motors[0].is_busy = L6470_NOT_BUSY;
-            RIM_Motors[0].recieved_cmd = CMD_NONE;
-            RIM_Motors[0].steps = 0;
-            UARTD_UartPutChar(RIM_OP_MOTOR_STOP | 0x00);
-        } 
-        else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
-        {
-            //Start motor movement
-            motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
-            RIM_Motors[0].recieved_cmd = CMD_RUNNING;
-            //One byte information that tells the PC that a motor 1 is running
-            UARTD_UartPutChar(RIM_OP_MOTOR_RUN | 0x00);
+        switch(RIM_Motors[0].command_type) {
+            //If recieved command is a motor run command
+            case RIM_OP_MOTOR_RUN:
+                if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd == CMD_RUNNING)
+                {
+                    transfer(SOFT_STOP);
+                    while(BUSY_Read() == 0);
+                    
+                    RIM_Motors[0].is_busy = L6470_NOT_BUSY;
+                    RIM_Motors[0].recieved_cmd = CMD_NONE;
+                    RIM_Motors[0].steps = 0;
+                    UARTD_UartPutChar(RIM_OP_MOTOR_STOP | 0x00);
+                } 
+                else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
+                {
+                    //Start motor movement
+                    motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
+                    RIM_Motors[0].recieved_cmd = CMD_RUNNING;
+                    //One byte information that tells the PC that a motor 1 is running
+                    UARTD_UartPutChar(RIM_OP_MOTOR_RUN | 0x00);
+                }
+                break;
+            //If command is asking for the motor status register
+            case RIM_OP_MOTOR_STATUS:
+                if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
+                {
+                    RIM_Motors[0].recieved_cmd = CMD_RUNNING;
+                    //One byte information that tells the PC that a motor 1 is running
+                    UARTD_UartPutChar(RIM_OP_MOTOR_STATUS | 0x00);
+                    RIM_UI_cmd_temp = get_status();
+                    cmd_content[0] = RIM_UI_cmd_temp;
+                    cmd_content[1] = RIM_UI_cmd_temp >> 8;
+                    UARTD_UartPutChar(cmd_content[0]);
+                    UARTD_UartPutChar(cmd_content[1]);
+                    RIM_Motors[0].recieved_cmd = CMD_NONE;
+                }
+                break;
+                
+                
+            default:
+                break;
         }
-        
         
         
         ////sprintf(result, "%i\r\n", test_num);
