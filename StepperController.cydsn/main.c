@@ -22,6 +22,7 @@ uint8 cmd_bytes[3];
 uint8 cur_motor_id;
 
 struct motors RIM_Motors[7];
+struct encoders RIM_Encoders[5];
 
 uint8 opcode;
 
@@ -37,6 +38,7 @@ CY_ISR(UART_INT_HANDLER)
     UARTD_ClearRxInterruptSource(UARTD_INTR_RX_NOT_EMPTY);
 
     char recieved_uart_char = UARTD_UartGetChar();
+    
 
     cur_bit_field++;
     //Byte 1
@@ -127,13 +129,22 @@ int main(void)
         RIM_Motors[i].steps = 0;
     }
     
+    //Assign enable ids
+    RIM_Motors[0].enable_id = RIM_M0_ENABLE;
+    RIM_Motors[1].enable_id = RIM_M1_ENABLE;
+    
+    RIM_Encoders[0].enable_id = RIM_E0_ENABLE;
+    RIM_Encoders[0].enable_id = RIM_E1_ENABLE;
+    
     uint16 RIM_UI_cmd_temp = 0;
     byte cmd_content[2] = {0, 0};
     
     CyGlobalIntEnable; /* Enable global interrupts. */
+    
+
+    
     UART_INT_StartEx(UART_INT_HANDLER);
     
-    enable_Write(1);
     SPI_Start();
     CyDelay(1000);
     
@@ -142,15 +153,15 @@ int main(void)
     
     UARTD_Start();
     
-    seeval = get_param(CONFIG);
-    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_4 | SYNC_SEL_1);
-    set_param(MAX_SPEED, max_speed_calc(500));
-    set_param(FS_SPD, fs_calc(50));
-    set_param(ACC, acc_calc(50));
-    set_param(DECEL, dec_calc(50));
-    set_param(OCD_TH, OCD_TH_2250mA);
-    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ);
-    set_param(KVAL_RUN, 0xFF);
+    seeval = get_param(CONFIG, RIM_Motors[0].enable_id);
+    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_4 | SYNC_SEL_1, RIM_Motors[0].enable_id);
+    set_param(MAX_SPEED, max_speed_calc(500), RIM_Motors[0].enable_id);
+    set_param(FS_SPD, fs_calc(50), RIM_Motors[0].enable_id);
+    set_param(ACC, acc_calc(50), RIM_Motors[0].enable_id);
+    set_param(DECEL, dec_calc(50), RIM_Motors[0].enable_id);
+    set_param(OCD_TH, OCD_TH_2250mA, RIM_Motors[0].enable_id);
+    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[0].enable_id);
+    set_param(KVAL_RUN, 0xFF, RIM_Motors[0].enable_id);
     
     
     
@@ -175,7 +186,7 @@ int main(void)
             case RIM_OP_MOTOR_RUN:
                 if(!RIM_Motors[0].is_busy && RIM_Motors[0].recieved_cmd == CMD_RUNNING)
                 {
-                    transfer(SOFT_STOP);
+                    transfer(SOFT_STOP, RIM_Motors[0].enable_id);
                     while(BUSY_Read() == 0);
                     
                     RIM_Motors[0].is_busy = L6470_NOT_BUSY;
@@ -186,7 +197,7 @@ int main(void)
                 else if (RIM_Motors[0].recieved_cmd == CMD_QUEUED) 
                 {
                     //Start motor movement
-                    motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps);
+                    motor_move(RIM_Motors[0].motor_dir ^ 0x1, RIM_Motors[0].steps, RIM_Motors[0].enable_id);
                     RIM_Motors[0].recieved_cmd = CMD_RUNNING;
                     //One byte information that tells the PC that a motor 1 is running
                     UARTD_UartPutChar(RIM_OP_MOTOR_RUN | 0x00);
@@ -199,7 +210,7 @@ int main(void)
                     RIM_Motors[0].recieved_cmd = CMD_RUNNING;
                     //One byte information that tells the PC that a motor 1 is running
                     UARTD_UartPutChar(RIM_OP_MOTOR_STATUS | 0x00);
-                    RIM_UI_cmd_temp = get_status();
+                    RIM_UI_cmd_temp = get_status(RIM_Motors[0].enable_id);
                     cmd_content[0] = RIM_UI_cmd_temp;
                     cmd_content[1] = RIM_UI_cmd_temp >> 8;
                     UARTD_UartPutChar(cmd_content[0]);

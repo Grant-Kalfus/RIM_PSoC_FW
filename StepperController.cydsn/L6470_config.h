@@ -19,17 +19,19 @@
     typedef unsigned char byte; 
     typedef unsigned int uint;
     
-    byte transfer(byte);   
+    //Modified
+    byte transfer(byte, byte enable_id);   
     
-    uint param_handler(byte param, uint value);
+    //Unmodified
+    uint param_handler(byte param, uint value, byte enable_id);
     
-    uint send_and_receive(uint value, byte blen);
+    uint send_and_receive(uint value, byte blen, byte enable_id);
     
-    void set_param(byte param, uint value);
+    void set_param(byte param, uint value, byte enable_id);
     
-    uint get_param(byte param);
+    uint get_param(byte param, byte enable_id);
     
-    void motor_move(byte dir, uint16 n_step);
+    void motor_move(byte dir, uint16 n_step, byte enable_id);
     
     uint acc_calc(float stepsPerSecPerSec);
     
@@ -41,7 +43,7 @@
     
     uint fs_calc(float stepsPerSec);
     
-    uint get_status();
+    uint get_status(byte enable_id);
     
 
 #endif
