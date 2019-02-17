@@ -16,12 +16,14 @@
 uint16 seeval;
 int8 cur_bit_field = 0;
 
+//Currently used for debugging
 uint8 cmd_bytes[3];
 
 uint8 cur_motor_id;
 
 struct motors RIM_Motors[7];
 
+uint8 opcode;
 
 //Checks if a pin is busy
 uint8 check_busy(uint8 pin_num);
@@ -37,6 +39,7 @@ CY_ISR(UART_INT_HANDLER)
     char recieved_uart_char = UARTD_UartGetChar();
 
     cur_bit_field++;
+    //Byte 1
     if(cur_bit_field == 1)
     {
         //command = recieved_uart_char;
@@ -47,38 +50,56 @@ CY_ISR(UART_INT_HANDLER)
         //O O O O | D M M M
         //O = Opcode, D = Direction, M = Motor ID, U = unused
         
-        
-        
-        cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
+        //Get Opcode
+        opcode = recieved_uart_char & 0xF0;
+        switch(opcode)
+        {
+            //If the incoming command is a motor run command
+            case RIM_OP_MOTOR_RUN:
+                cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
+                
+                //Make sure there will be no command overlap
+                if(RIM_Motors[cur_motor_id].is_busy)
+                    cur_bit_field = -1;
+                else
+                    RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 3;
+                
+                break;
+        }
         
         //Prevent command overlap
-        if(RIM_Motors[cur_motor_id].is_busy)
-            cur_bit_field = -1;
         
-
-        RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 3;
     }
+    //Byte 2
     else if(cur_bit_field == 3)
     {
         //LSB of 16b number of steps to take
+        switch(opcode)
+        {
+            case RIM_OP_MOTOR_RUN:
+                RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
+                break;
+        }
         
-        RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
         
         cmd_bytes[1] = recieved_uart_char;
     }
+    
+    //Byte 3
     else if(cur_bit_field == 5)
     {
-        //MSB of 16b number of steps to take
+        switch(opcode)
+        {
+            case RIM_OP_MOTOR_RUN:
+                //MSB of 16b number of steps to take
+                RIM_Motors[cur_motor_id].steps |= ((uint16)recieved_uart_char << 8);
+                RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
+                RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
+                break;
+        }
+        
         cmd_bytes[2] = recieved_uart_char;
-        
-        
-        RIM_Motors[cur_motor_id].steps |= ((uint16)recieved_uart_char << 8);
-        
-        RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
-        RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
-        
         cur_bit_field = -1;
-
     }
 
 }
