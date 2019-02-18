@@ -45,6 +45,7 @@
     #define RIM_OP_MOTOR_SET_PARAM     0x20
     #define RIM_OP_MOTOR_STATUS        0x30
     #define RIM_OP_ENCODER_INFO        0x40
+    #define RIM_OP_ERROR               0x50
     
     #define RIM_OP_MOTOR_EXTENDED_STEP 0x80
     

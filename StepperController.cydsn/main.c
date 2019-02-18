@@ -75,6 +75,12 @@ CY_ISR(UART_INT_HANDLER)
                 else
                     RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_STATUS;
                 break;
+            case RIM_OP_ENCODER_INFO:
+                cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
+                if(RIM_Encoders[cur_motor_id].is_busy)
+                    cur_bit_field = -1;
+                    break;
+                   
         }
         
         
@@ -89,6 +95,8 @@ CY_ISR(UART_INT_HANDLER)
                 RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
                 break;
             case RIM_OP_MOTOR_STATUS:
+                break;
+            case RIM_OP_ENCODER_INFO:
                 break;
         }
         
@@ -108,6 +116,10 @@ CY_ISR(UART_INT_HANDLER)
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
             case RIM_OP_MOTOR_STATUS:
+                RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
+                RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
+                break;
+            case RIM_OP_ENCODER_INFO:
                 RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
@@ -223,6 +235,24 @@ int main(void)
             default:
                 break;
         }
+        
+        switch(RIM_Encoders[0].command_type)
+        {
+            case RIM_OP_ENCODER_INFO: 
+                if(RIM_Encoders[0].recieved_cmd == CMD_QUEUED) 
+                {
+                    RIM_Encoders[0].recieved_cmd = CMD_RUNNING;
+                    UARTD_UartPutChar(RIM_OP_ENCODER_INFO | 0x00);
+                    RIM_UI_cmd_temp = CUI_get_position(RIM_Encoders[0].enable_id);
+                    cmd_content[0] = RIM_UI_cmd_temp;
+                    cmd_content[1] = RIM_UI_cmd_temp >> 8;
+                    UARTD_UartPutChar(cmd_content[0]);
+                    UARTD_UartPutChar(cmd_content[1]);
+                    RIM_Motors[0].recieved_cmd = CMD_NONE;
+                }
+                break;
+        }
+        
         
         //seeval = CUI_get_position(RIM_Encoders[0].enable_id);
         ////sprintf(result, "%i\r\n", test_num);
