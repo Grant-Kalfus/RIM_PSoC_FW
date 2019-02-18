@@ -49,14 +49,17 @@
     #define RIM_OP_MOTOR_EXTENDED_STEP 0x80
     
     //CUI Encoder Constants
-    #define CUI_NOP_SEND 0x00
+    #define CUI_NOP 0x00
     #define CUI_NO_DATA 0xA5
     #define CUI_READ_POS 0x10
     #define CUI_SET_ZERO_POS 0x70
     
     //CUI Encoder Functions
-    uint16 CUI_read_pos();
-    uint8 wait_for_response();
+    void CUI_transfer(uint8 command, uint8 enable_id);
+    
+    uint8 CUI_read(uint8 enable_id);
+    
+    uint16 CUI_get_position(uint8 enable_id);
     
     struct encoders {
         //Stores which enable pin needs to be pulled down for SPI communications 
@@ -72,7 +75,7 @@
     
     struct motors {
         //Stores which enable pin needs to be pulled down for SPI communications
-        //Will be loaded into the enable control register componant 
+        
         uint8 enable_id;
         
         //Stores number of steps

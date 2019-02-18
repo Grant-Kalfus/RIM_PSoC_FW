@@ -134,7 +134,7 @@ int main(void)
     RIM_Motors[1].enable_id = RIM_M1_ENABLE;
     
     RIM_Encoders[0].enable_id = RIM_E0_ENABLE;
-    RIM_Encoders[0].enable_id = RIM_E1_ENABLE;
+    RIM_Encoders[1].enable_id = RIM_E1_ENABLE;
     
     uint16 RIM_UI_cmd_temp = 0;
     byte cmd_content[2] = {0, 0};
@@ -224,7 +224,7 @@ int main(void)
                 break;
         }
         
-        
+        //seeval = CUI_get_position(RIM_Encoders[0].enable_id);
         ////sprintf(result, "%i\r\n", test_num);
         //UARTD_UartPutString(result);
         
