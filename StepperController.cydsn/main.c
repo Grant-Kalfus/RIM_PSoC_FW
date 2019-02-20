@@ -64,8 +64,10 @@ CY_ISR(UART_INT_HANDLER)
                 if(RIM_Motors[cur_motor_id].is_busy)
                     cur_bit_field = -1;
                 else
+                {
                     RIM_Motors[cur_motor_id].motor_dir = cmd_bytes[0] >> 3;
                     RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_RUN;
+                }
                 break;
                     
             case RIM_OP_MOTOR_STATUS:
@@ -75,11 +77,14 @@ CY_ISR(UART_INT_HANDLER)
                 else
                     RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_STATUS;
                 break;
+                    
             case RIM_OP_ENCODER_INFO:
                 cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
                 if(RIM_Encoders[cur_motor_id].is_busy)
                     cur_bit_field = -1;
-                    break;
+                else
+                    RIM_Encoders[cur_motor_id].command_type = RIM_OP_ENCODER_INFO;
+                break;
                    
         }
         
@@ -120,8 +125,8 @@ CY_ISR(UART_INT_HANDLER)
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
             case RIM_OP_ENCODER_INFO:
-                RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
-                RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
+                RIM_Encoders[cur_motor_id].is_busy = L6470_NOT_BUSY;
+                RIM_Encoders[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
         }
         
