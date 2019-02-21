@@ -25,8 +25,10 @@
       <Data key="98c879ae-08ca-4604-b5a9-3ea5dcdd917b" value="m2_enable" />
       <Data key="591a88ff-1353-448e-bf19-a94843213f8b" value="RST" />
       <Data key="9302e577-2dbb-4e3c-b972-186394e1b154" value="e1_enable" />
+      <Data key="77151a2a-bb66-4802-9d88-f4f7f1317e22" value="BUSY2" />
       <Data key="596079a9-3e8a-4b29-8ac6-a6ba0d786f7b" value="Rx_1" />
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="MISO" />
+      <Data key="d446c40f-b4d1-4c5e-95ec-48b04e6cf09c" value="RST2" />
       <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="m1_enable" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="MOSI" />
     </Group>
@@ -1342,6 +1344,11 @@
         <Data key="Port Format" value="3,1" />
       </Group>
     </Group>
+    <Group key="77151a2a-bb66-4802-9d88-f4f7f1317e22">
+      <Group key="0">
+        <Data key="Port Format" value="2,6" />
+      </Group>
+    </Group>
     <Group key="596079a9-3e8a-4b29-8ac6-a6ba0d786f7b">
       <Group key="0">
         <Data key="Port Format" value="0,4" />
@@ -1350,6 +1357,11 @@
     <Group key="1425177d-0d0e-4468-8bcc-e638e5509a9b">
       <Group key="0">
         <Data key="Port Format" value="2,1" />
+      </Group>
+    </Group>
+    <Group key="d446c40f-b4d1-4c5e-95ec-48b04e6cf09c">
+      <Group key="0">
+        <Data key="Port Format" value="2,7" />
       </Group>
     </Group>
     <Group key="e851a3b9-efb8-48be-bbb8-b303b216c393">
