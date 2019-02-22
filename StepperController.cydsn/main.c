@@ -146,6 +146,8 @@ int main(void)
         RIM_Motors[i].steps = 0;
     }
     
+    Busy_Clk_Start();
+    
     //Assign enable ids
     RIM_Motors[0].enable_id = RIM_M0_ENABLE;
     RIM_Motors[1].enable_id = RIM_M1_ENABLE;
@@ -165,11 +167,8 @@ int main(void)
     SPI_Start();
     CyDelay(1000);
     
-    
-    RST_Write(0);
-    RST_Write(1);
-    RST2_Write(0);
-    RST2_Write(1);
+    RST_Reg_Write(0x0);
+    RST_Reg_Write(0x3);
     
     UARTD_Start();
     
@@ -204,19 +203,21 @@ int main(void)
     {  
         int i = 0;
         //Send update to PC that motor is currently running
+        char ch = Busy_Reg_Read()^0x3;
         
         
         //The motor is moving when BUSY_Read() = 0
-        RIM_Motors[0].is_busy = BUSY_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
-        RIM_Motors[1].is_busy = BUSY2_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
+        RIM_Motors[0].is_busy = ch & 0x01;
+        RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
         
         for(i = 0; i < 2; i++) {
             
             if(RIM_Motors[i].recieved_cmd == CMD_NONE && RIM_Encoders[i].recieved_cmd == CMD_NONE)
             {
                 continue;
-                RIM_Motors[0].is_busy = BUSY_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
-                RIM_Motors[1].is_busy = BUSY2_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
+                ch = Busy_Reg_Read()^0x3;
+                RIM_Motors[0].is_busy = ch & 0x01;
+                RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
             }
             
             switch(RIM_Motors[i].command_type) {
@@ -225,6 +226,8 @@ int main(void)
                     if(!RIM_Motors[i].is_busy && RIM_Motors[i].recieved_cmd == CMD_RUNNING)
                     {
                         transfer(SOFT_STOP, RIM_Motors[i].enable_id);
+                        while(((Busy_Reg_Read() >> i) & 0x01) == 0);
+                        
                         
                         RIM_Motors[i].is_busy = L6470_NOT_BUSY;
                         RIM_Motors[i].recieved_cmd = CMD_NONE;
