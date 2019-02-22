@@ -174,7 +174,7 @@ int main(void)
     UARTD_Start();
     
     seeval = get_param(CONFIG, RIM_Motors[0].enable_id);
-    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_4 | SYNC_SEL_1, RIM_Motors[0].enable_id);
+    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[0].enable_id);
     set_param(MAX_SPEED, max_speed_calc(500), RIM_Motors[0].enable_id);
     set_param(FS_SPD, fs_calc(50), RIM_Motors[0].enable_id);
     set_param(ACC, acc_calc(50), RIM_Motors[0].enable_id);
@@ -184,12 +184,12 @@ int main(void)
     set_param(KVAL_RUN, 0xFF, RIM_Motors[0].enable_id);
     
     seeval = get_param(CONFIG, RIM_Motors[1].enable_id);
-    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_4 | SYNC_SEL_1, RIM_Motors[1].enable_id);
-    set_param(MAX_SPEED, max_speed_calc(200), RIM_Motors[1].enable_id);
+    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[1].enable_id);
+    set_param(MAX_SPEED, max_speed_calc(600), RIM_Motors[1].enable_id);
     set_param(FS_SPD, fs_calc(50), RIM_Motors[1].enable_id);
     set_param(ACC, acc_calc(50), RIM_Motors[1].enable_id);
     set_param(DECEL, dec_calc(50), RIM_Motors[1].enable_id);
-    set_param(OCD_TH, OCD_TH_2250mA, RIM_Motors[1].enable_id);
+    set_param(OCD_TH, OCD_TH_1875mA, RIM_Motors[1].enable_id);
     set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[1].enable_id);
     set_param(KVAL_RUN, 0xFF, RIM_Motors[1].enable_id);
     
@@ -211,19 +211,20 @@ int main(void)
         RIM_Motors[1].is_busy = BUSY2_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
         
         for(i = 0; i < 2; i++) {
+            
             if(RIM_Motors[i].recieved_cmd == CMD_NONE && RIM_Encoders[i].recieved_cmd == CMD_NONE)
             {
                 continue;
                 RIM_Motors[0].is_busy = BUSY_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
                 RIM_Motors[1].is_busy = BUSY2_Read() == 0 ? L6470_BUSY : L6470_NOT_BUSY;
             }
+            
             switch(RIM_Motors[i].command_type) {
                 //If recieved command is a motor run command
                 case RIM_OP_MOTOR_RUN:
                     if(!RIM_Motors[i].is_busy && RIM_Motors[i].recieved_cmd == CMD_RUNNING)
                     {
                         transfer(SOFT_STOP, RIM_Motors[i].enable_id);
-                        while(BUSY_Read() == 0 || BUSY2_Read() == 0);
                         
                         RIM_Motors[i].is_busy = L6470_NOT_BUSY;
                         RIM_Motors[i].recieved_cmd = CMD_NONE;
