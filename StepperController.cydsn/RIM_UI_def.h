@@ -32,11 +32,19 @@
     #define L6470_BUSY 0x01
     
     //SPI Enable Pin Values
-    #define RIM_ALL_OFF   0xF
-    #define RIM_M0_ENABLE 0xE
-    #define RIM_E0_ENABLE 0xD
-    #define RIM_M1_ENABLE 0xB
-    #define RIM_E1_ENABLE 0x7
+    #define RIM_ALL_OFF   0xFF
+    
+    #define RIM_M0_ENABLE 0xFE
+    #define RIM_M1_ENABLE 0xFD
+    #define RIM_M2_ENABLE 0xFB
+    #define RIM_M3_ENABLE 0xF7
+    #define RIM_M4_ENABLE 0xEF
+    
+    #define RIM_E0_ENABLE 0xFE
+    #define RIM_E1_ENABLE 0xFD
+    #define RIM_E2_ENABLE 0xFB
+    #define RIM_E3_ENABLE 0xF7
+    #define RIM_E4_ENABLE 0xEF
     
     
     //RIM OpCodes
@@ -46,6 +54,7 @@
     #define RIM_OP_MOTOR_STATUS        0x30
     #define RIM_OP_ENCODER_INFO        0x40
     #define RIM_OP_ERROR               0x50
+    #define RIM_OP_RESET_DEV           0x60
     
     #define RIM_OP_MOTOR_EXTENDED_STEP 0x80
     

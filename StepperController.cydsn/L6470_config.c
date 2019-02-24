@@ -42,11 +42,11 @@ void motor_move(byte dir, uint16 n_step, byte enable_id)
 
 //Adapted from dSPIN_Xfer of Sparkfun arduino librarys for L6470
 byte transfer(byte data, byte enable_id) {
-    Enable_Reg_Write(enable_id);
+    Motor_Enable_Reg_Write(enable_id);
     SPI_WriteTxData(data);
     while(!(SPI_ReadTxStatus() & SPI_STS_SPI_DONE));
     while(!(SPI_ReadRxStatus() & SPI_STS_RX_FIFO_NOT_EMPTY));
-    Enable_Reg_Write(RIM_ALL_OFF);
+    Motor_Enable_Reg_Write(RIM_ALL_OFF);
     CyDelayUs(2);
     return SPI_ReadRxData();
 }

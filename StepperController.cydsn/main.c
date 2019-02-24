@@ -13,6 +13,12 @@
 #include <stdio.h>
 #include "RIM_UI_def.h"
 
+#define CURRENTLY_CONNECTED_MOTORS   2
+#define CURRENTLY_CONNECTED_ENCODERS 1
+
+void write_reset(int dev_id);
+uint8 check_busy(uint8 pin_num);
+
 uint16 seeval;
 int8 cur_bit_field = 0;
 
@@ -27,7 +33,7 @@ struct encoders RIM_Encoders[5];
 uint8 opcode;
 
 //Checks if a pin is busy
-uint8 check_busy(uint8 pin_num);
+
 
 //ISR for interpreting input from the computer
 //Expects three bytes of data
@@ -77,7 +83,14 @@ CY_ISR(UART_INT_HANDLER)
                 else
                     RIM_Motors[cur_motor_id].command_type = RIM_OP_MOTOR_STATUS;
                 break;
-                    
+            //Command to reset device
+            case RIM_OP_RESET_DEV:
+                cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
+                if(RIM_Motors[cur_motor_id].is_busy)
+                    cur_bit_field = -1;
+                else
+                    RIM_Motors[cur_motor_id].command_type = RIM_OP_RESET_DEV;
+                break;    
             case RIM_OP_ENCODER_INFO:
                 cur_motor_id = recieved_uart_char & RIM_MOTOR_ID;
                 if(RIM_Encoders[cur_motor_id].is_busy)
@@ -85,7 +98,7 @@ CY_ISR(UART_INT_HANDLER)
                 else
                     RIM_Encoders[cur_motor_id].command_type = RIM_OP_ENCODER_INFO;
                 break;
-                   
+
         }
         
         
@@ -100,6 +113,8 @@ CY_ISR(UART_INT_HANDLER)
                 RIM_Motors[cur_motor_id].steps |= recieved_uart_char;
                 break;
             case RIM_OP_MOTOR_STATUS:
+                break;
+            case RIM_OP_RESET_DEV:
                 break;
             case RIM_OP_ENCODER_INFO:
                 break;
@@ -121,6 +136,10 @@ CY_ISR(UART_INT_HANDLER)
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
             case RIM_OP_MOTOR_STATUS:
+                RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
+                RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
+                break;
+            case RIM_OP_RESET_DEV:
                 RIM_Motors[cur_motor_id].is_busy = L6470_NOT_BUSY;
                 RIM_Motors[cur_motor_id].recieved_cmd = CMD_QUEUED;
                 break;
@@ -151,9 +170,15 @@ int main(void)
     //Assign enable ids
     RIM_Motors[0].enable_id = RIM_M0_ENABLE;
     RIM_Motors[1].enable_id = RIM_M1_ENABLE;
+    RIM_Motors[2].enable_id = RIM_M2_ENABLE;
+    RIM_Motors[3].enable_id = RIM_M3_ENABLE;
+    RIM_Motors[4].enable_id = RIM_M4_ENABLE;
     
     RIM_Encoders[0].enable_id = RIM_E0_ENABLE;
     RIM_Encoders[1].enable_id = RIM_E1_ENABLE;
+    RIM_Encoders[2].enable_id = RIM_E2_ENABLE;
+    RIM_Encoders[3].enable_id = RIM_E3_ENABLE;
+    RIM_Encoders[4].enable_id = RIM_E4_ENABLE;
     
     uint16 RIM_UI_cmd_temp = 0;
     byte cmd_content[2] = {0, 0};
@@ -167,11 +192,15 @@ int main(void)
     SPI_Start();
     CyDelay(1000);
     
-    RST_Reg_Write(0x0);
-    RST_Reg_Write(0x3);
+    RST_Write(0);
+    RST_Write(1);
+    
+    RST2_Write(0);
+    RST2_Write(1);
     
     UARTD_Start();
     
+    //Setup Parameters
     seeval = get_param(CONFIG, RIM_Motors[0].enable_id);
     set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[0].enable_id);
     set_param(MAX_SPEED, max_speed_calc(500), RIM_Motors[0].enable_id);
@@ -206,13 +235,14 @@ int main(void)
         char ch = Busy_Reg_Read()^0x3;
         
         
-        //The motor is moving when BUSY_Read() = 0
+        //Take first result of the busy status register and place in the approprate spot
         RIM_Motors[0].is_busy = ch & 0x01;
+        //Take second result of the busy status register and place in the approprate spot
         RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
         
-        for(i = 0; i < 2; i++) {
+        for(i = 0; i < CURRENTLY_CONNECTED_MOTORS; i++) {
             
-            if(RIM_Motors[i].recieved_cmd == CMD_NONE && RIM_Encoders[i].recieved_cmd == CMD_NONE)
+            if(RIM_Motors[i].recieved_cmd == CMD_NONE)
             {
                 continue;
                 ch = Busy_Reg_Read()^0x3;
@@ -258,14 +288,35 @@ int main(void)
                         RIM_Motors[i].recieved_cmd = CMD_NONE;
                     }
                     break;
-                    
+                case RIM_OP_RESET_DEV:
+                    if (RIM_Motors[i].recieved_cmd == CMD_QUEUED)
+                    {
+                        //Command Resets and retrieves status
+                        RIM_Motors[i].recieved_cmd = CMD_RUNNING;
+                        write_reset(i);
+                        UARTD_UartPutChar(RIM_OP_RESET_DEV | i);
+                        
+                        RIM_UI_cmd_temp = get_status(RIM_Motors[i].enable_id);
+                        cmd_content[0] = RIM_UI_cmd_temp;
+                        cmd_content[1] = RIM_UI_cmd_temp >> 8;
+                        UARTD_UartPutChar(cmd_content[0]);
+                        UARTD_UartPutChar(cmd_content[1]);
+                        RIM_Motors[i].recieved_cmd = CMD_NONE;
+                    }
                     
                 default:
                     break;
             }
             
+        }
+        for(i = 0; i < CURRENTLY_CONNECTED_ENCODERS; i++) {
+            
+            if(RIM_Encoders[i].recieved_cmd == CMD_NONE)
+                continue;
+            
             switch(RIM_Encoders[i].command_type)
             {
+                
                 case RIM_OP_ENCODER_INFO: 
                     if(RIM_Encoders[i].recieved_cmd == CMD_QUEUED) 
                     {
@@ -280,7 +331,6 @@ int main(void)
                     }
                     break;
             }
-            
         }
         //seeval = CUI_get_position(RIM_Encoders[0].enable_id);
         ////sprintf(result, "%i\r\n", test_num);
@@ -298,6 +348,20 @@ int main(void)
         
         //while(1);
         /* Place your application code here. */
+    }
+}
+void write_reset(int dev_id) {
+    switch(dev_id) 
+    {
+        case 0:
+            RST_Write(0);
+            RST_Write(1);
+            break;
+        case 1:
+            RST2_Write(0);
+            RST2_Write(1);
+        default:
+            break;
     }
 }
 
