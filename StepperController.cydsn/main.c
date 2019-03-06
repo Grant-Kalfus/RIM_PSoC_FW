@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include "RIM_UI_def.h"
 
-#define CURRENTLY_CONNECTED_MOTORS   2
-#define CURRENTLY_CONNECTED_ENCODERS 1
+#define CURRENTLY_CONNECTED_MOTORS   3
+#define CURRENTLY_CONNECTED_ENCODERS 0
 
 void write_reset(int dev_id);
 uint8 check_busy(uint8 pin_num);
@@ -198,29 +198,41 @@ int main(void)
     RST2_Write(0);
     RST2_Write(1);
     
+    RST3_Write(0);
+    RST3_Write(1);
+    
     UARTD_Start();
     
     //Setup Parameters
     seeval = get_param(CONFIG, RIM_Motors[0].enable_id);
     set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[0].enable_id);
     set_param(MAX_SPEED, max_speed_calc(500), RIM_Motors[0].enable_id);
-    set_param(FS_SPD, fs_calc(50), RIM_Motors[0].enable_id);
+    set_param(FS_SPD,  0x3FF, RIM_Motors[0].enable_id);
     set_param(ACC, acc_calc(50), RIM_Motors[0].enable_id);
     set_param(DECEL, dec_calc(50), RIM_Motors[0].enable_id);
-    set_param(OCD_TH, OCD_TH_2250mA, RIM_Motors[0].enable_id);
+    set_param(OCD_TH, OCD_TH_6000mA, RIM_Motors[0].enable_id);
     set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[0].enable_id);
     set_param(KVAL_RUN, 0xFF, RIM_Motors[0].enable_id);
     
     seeval = get_param(CONFIG, RIM_Motors[1].enable_id);
     set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[1].enable_id);
     set_param(MAX_SPEED, max_speed_calc(600), RIM_Motors[1].enable_id);
-    set_param(FS_SPD, fs_calc(50), RIM_Motors[1].enable_id);
-    set_param(ACC, acc_calc(50), RIM_Motors[1].enable_id);
-    set_param(DECEL, dec_calc(50), RIM_Motors[1].enable_id);
-    set_param(OCD_TH, OCD_TH_1875mA, RIM_Motors[1].enable_id);
-    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[1].enable_id);
+    set_param(FS_SPD,  0x3FF, RIM_Motors[1].enable_id);
+    set_param(ACC, acc_calc(100), RIM_Motors[1].enable_id);
+    set_param(DECEL, dec_calc(100), RIM_Motors[1].enable_id);
+    set_param(OCD_TH, OCD_TH_6000mA, RIM_Motors[1].enable_id);
+    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_530V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[1].enable_id);
     set_param(KVAL_RUN, 0xFF, RIM_Motors[1].enable_id);
     
+    seeval = get_param(CONFIG, RIM_Motors[2].enable_id);
+    set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[2].enable_id);
+    set_param(MAX_SPEED, max_speed_calc(600), RIM_Motors[2].enable_id);
+    set_param(FS_SPD,  0x3FF, RIM_Motors[2].enable_id);
+    set_param(ACC, acc_calc(100), RIM_Motors[2].enable_id);
+    set_param(DECEL, dec_calc(100), RIM_Motors[2].enable_id);
+    set_param(OCD_TH, OCD_TH_6000mA, RIM_Motors[2].enable_id);
+    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_530V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[2].enable_id);
+    set_param(KVAL_RUN, 0xFF, RIM_Motors[2].enable_id);
     
     char result[100];
     
@@ -248,7 +260,10 @@ int main(void)
                 ch = Busy_Reg_Read()^0x3;
                 RIM_Motors[0].is_busy = ch & 0x01;
                 RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
+                RIM_Motors[2].is_busy = (ch >> 2) & 0x01;
             }
+            
+
             
             switch(RIM_Motors[i].command_type) {
                 //If recieved command is a motor run command

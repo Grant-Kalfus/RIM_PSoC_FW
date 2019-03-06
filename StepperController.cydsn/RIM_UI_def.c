@@ -18,10 +18,10 @@ uint8 testvar = 0;
 
 void CUI_transfer(uint8 command, uint8 enable_id) 
 {
-    Encoder_Enable_Reg_Write(enable_id);
+    //Encoder_Enable_Reg_Write(enable_id);
     SPI_WriteTxData(command);
     while(!(SPI_ReadTxStatus() & SPI_STS_SPI_DONE));
-    Encoder_Enable_Reg_Write(RIM_ALL_OFF);
+    //Encoder_Enable_Reg_Write(RIM_ALL_OFF);
 }
 
 uint8 CUI_read(uint8 enable_id) 
