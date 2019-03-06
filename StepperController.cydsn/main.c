@@ -17,7 +17,8 @@
 #define CURRENTLY_CONNECTED_ENCODERS 0
 
 void write_reset(int dev_id);
-uint8 check_busy(uint8 pin_num);
+//uint8 check_busy(uint8 pin_num);
+uint8 check_busy(byte dev_id);
 
 uint16 seeval;
 int8 cur_bit_field = 0;
@@ -165,7 +166,6 @@ int main(void)
         RIM_Motors[i].steps = 0;
     }
     
-    Busy_Clk_Start();
     
     //Assign enable ids
     RIM_Motors[0].enable_id = RIM_M0_ENABLE;
@@ -203,6 +203,8 @@ int main(void)
     
     UARTD_Start();
     
+    
+    
     //Setup Parameters
     seeval = get_param(CONFIG, RIM_Motors[0].enable_id);
     set_param(STEP_MODE, !SYNC_EN | STEP_SEL_1_2 | SYNC_SEL_1, RIM_Motors[0].enable_id);
@@ -229,9 +231,9 @@ int main(void)
     set_param(MAX_SPEED, max_speed_calc(600), RIM_Motors[2].enable_id);
     set_param(FS_SPD,  0x3FF, RIM_Motors[2].enable_id);
     set_param(ACC, acc_calc(100), RIM_Motors[2].enable_id);
-    set_param(DECEL, dec_calc(100), RIM_Motors[2].enable_id);
+    set_param(DECEL, dec_calc(35), RIM_Motors[2].enable_id);
     set_param(OCD_TH, OCD_TH_6000mA, RIM_Motors[2].enable_id);
-    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_530V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[2].enable_id);
+    set_param(CONFIG, CONFIG_PWM_DIV_1 | CONFIG_PWM_MUL_2 | CONFIG_SR_290V_us | CONFIG_OC_SD_ENABLE | CONFIG_VS_COMP_DISABLE | CONFIG_SW_HARD_STOP | CONFIG_INT_16MHZ, RIM_Motors[2].enable_id);
     set_param(KVAL_RUN, 0xFF, RIM_Motors[2].enable_id);
     
     char result[100];
@@ -243,27 +245,21 @@ int main(void)
     for(;;)
     {  
         int i = 0;
+        
         //Send update to PC that motor is currently running
-        char ch = Busy_Reg_Read()^0x3;
+        RIM_Motors[0].is_busy = BUSY_Read()  ^ 0x01;
+        RIM_Motors[1].is_busy = BUSY2_Read() ^ 0x01;
+        RIM_Motors[2].is_busy = BUSY3_Read() ^ 0x01;
         
-        
-        //Take first result of the busy status register and place in the approprate spot
-        RIM_Motors[0].is_busy = ch & 0x01;
-        //Take second result of the busy status register and place in the approprate spot
-        RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
         
         for(i = 0; i < CURRENTLY_CONNECTED_MOTORS; i++) {
-            
             if(RIM_Motors[i].recieved_cmd == CMD_NONE)
             {
                 continue;
-                ch = Busy_Reg_Read()^0x3;
-                RIM_Motors[0].is_busy = ch & 0x01;
-                RIM_Motors[1].is_busy = (ch >> 1) & 0x01;
-                RIM_Motors[2].is_busy = (ch >> 2) & 0x01;
             }
-            
-
+            RIM_Motors[0].is_busy = BUSY_Read() ^ 0x01;
+            RIM_Motors[1].is_busy = BUSY2_Read() ^ 0x01;
+            RIM_Motors[2].is_busy = BUSY3_Read() ^ 0x01;
             
             switch(RIM_Motors[i].command_type) {
                 //If recieved command is a motor run command
@@ -271,9 +267,8 @@ int main(void)
                     if(!RIM_Motors[i].is_busy && RIM_Motors[i].recieved_cmd == CMD_RUNNING)
                     {
                         transfer(SOFT_STOP, RIM_Motors[i].enable_id);
-                        while(((Busy_Reg_Read() >> i) & 0x01) == 0);
-                        
-                        
+                        while(check_busy(i));
+
                         RIM_Motors[i].is_busy = L6470_NOT_BUSY;
                         RIM_Motors[i].recieved_cmd = CMD_NONE;
                         RIM_Motors[i].steps = 0;
@@ -375,12 +370,38 @@ void write_reset(int dev_id) {
         case 1:
             RST2_Write(0);
             RST2_Write(1);
+        case 2:
+            RST3_Write(0);
+            RST3_Write(1);
         default:
             break;
     }
 }
 
-//Motor 1 is the first bit
+uint8 check_busy(byte dev_id)
+{
+    uint8 r = 0;
+    
+    switch(dev_id) 
+    {
+        case 0:
+            RIM_Motors[0].is_busy = BUSY_Read() ^ 0x1;
+            r = RIM_Motors[0].is_busy;
+            break;
+        case 1:
+            RIM_Motors[1].is_busy = BUSY2_Read() ^ 0x1;
+            r = RIM_Motors[1].is_busy;
+            break;
+        case 2:
+            RIM_Motors[2].is_busy = BUSY3_Read() ^ 0x1;
+            r = RIM_Motors[2].is_busy;
+            break;
+        default:
+            break;
+    }
+    return r;
+}
+
 
 
 /* [] END OF FILE */
